@@ -62,7 +62,7 @@ static
 
 ///////////////////////////////////
 
-forward OnPlayerInputCaptcha(playerid, captchaid, bool: correct_number);
+forward OnPlayerInputCaptcha(playerid, captchaid, bool: resualt);
 
 ///////////////////////////////////
 
