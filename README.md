@@ -2,27 +2,24 @@
 ##### <https://www.youtube.com/watch?v=aGhHXSs0WHw>
 ---
 
-Подключаем после всех ```include```
- ```pawn
- #include <audio_captcha>
- ```
- Функция для показа капчи игроку:
+> Show captcha for player:
 ```pawn
 captcha_ShowPlayer(playerid, captchaid)
 ```
-- ```playerid``` - передаем идентификатор игрока
-- ```captchaid``` - передаем идентификатор константы
+- `playerid` - player identifier  
+- `captchaid` - constant identifier
 
-Callback для проверки ввода капчи
+
+> Callback for check
 ```pawn
 OnPlayerInputCaptcha(playerid, captchaid, bool: correct_number)
 ```
-- ```playerid``` - идентификатор игрока
-- ```captchaid``` - идентификатор константы
-- ```resualt``` - ```true```, игрок нажал на правильную цифру, если ```false```, игрок нажал на неправильную цифру
+- `playerid` - player identifier  
+- `captchaid` - constant identifier  
+- `result` - `true` if the player clicked the correct number, `false` if the player clicked the wrong number
 
 ---
-### Пример
+> Example
 ```pawn
 enum
 {
@@ -33,22 +30,21 @@ CMD:test(playerid)
 {
     captcha_ShowPlayer(playerid, CAPTCHA_TEST);
     return 1;
-
 }
 
-public OnPlayerInputCaptcha(playerid, captchaid, bool: resualt)
+public OnPlayerInputCaptcha(playerid, captchaid, bool:result)
 {
     switch (captchaid)
     {
         case CAPTCHA_TEST:
         {
-            if (resualt == true)
+            if (result == true)
             {
-                SendClientMessage(playerid, -1, !"Игрок нажал на правильную цифру");
+                SendClientMessage(playerid, -1, !"Ok");
             }
             else
             {
-                SendClientMessage(playerid, -1, !"Игрок нажал на неправильную цифру");
+                SendClientMessage(playerid, -1, !"Wrong");
             }
         }
     }
