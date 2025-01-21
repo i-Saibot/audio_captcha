@@ -1,28 +1,26 @@
 /*
 
 	Author: Saibot
-
 	Script: Audio Captcha
 
 */
 
-#if defined audio_captcha
+#if defined _audio_captcha_included
 	#endinput
 #endif
-#define audio_captcha
+#define _audio_captcha_included
 
 
 const
-	MAX_TD_CAPTCHA = 11,
-	MAX_LENGHT_LINKS = 90
-;
+	MAX_TD_CAPTCHA		= 11,
+	MAX_LENGHT_LINKS	= 90;
 
-static enum e_captcha
+static enum e_captcha_struct
 {
 	captcha_number,
 	captcha_links[MAX_LENGHT_LINKS]
 }
-static const links_for_captcha[][e_captcha] =
+static const gAudtioCaptchaLinks[][e_captcha_struct] =
 {
 	{1, "https://download1083.mediafire.com/z3d6u2l9a5lg/5kou9m35wv2qc37/asdfcxzvasdaewq.mp3"},
 	{2, "https://download1498.mediafire.com/tloqkqhuyqmg/3axdz5f017nj9c1/asdgghdfkjghergih.mp3"},
@@ -44,9 +42,9 @@ static const links_for_captcha[][e_captcha] =
 static enum e_captcha_player_info
 {
 	captcha_id,
-	bool: captcha_is_show,
+	bool:captcha_is_init_td,
 	captcha_correct_answer,
-	PlayerText: captcha_texdtraw[MAX_TD_CAPTCHA]
+	PlayerText:captcha_texdtraws[MAX_TD_CAPTCHA]
 }
 static
 	captcha_PlayerInfo[MAX_PLAYERS][e_captcha_player_info],
@@ -55,23 +53,54 @@ static
 		0,
 		false,
 		0,
-		PlayerText:0xFFFF
+		{
+			INVALID_PLAYER_TEXT_DRAW,
+			INVALID_PLAYER_TEXT_DRAW,
+			INVALID_PLAYER_TEXT_DRAW,
+			INVALID_PLAYER_TEXT_DRAW,
+			INVALID_PLAYER_TEXT_DRAW,
+			INVALID_PLAYER_TEXT_DRAW,
+			INVALID_PLAYER_TEXT_DRAW,
+			INVALID_PLAYER_TEXT_DRAW,
+			INVALID_PLAYER_TEXT_DRAW,
+			INVALID_PLAYER_TEXT_DRAW,
+			INVALID_PLAYER_TEXT_DRAW
+		}
 	}
 ;
 
 
 ///////////////////////////////////
 
-forward OnPlayerInputCaptcha(playerid, captchaid, bool: resualt);
+forward OnPlayerInputCaptcha(playerid, captchaid, bool:result);
 
 ///////////////////////////////////
 
-
+public OnGameModeInit()
+{
+	for (new i; i < sizeof(captcha_PlayerInfo); i++)
+	{
+		captcha_PlayerInfo[i] = captcha_DefaultValue;
+	}
+#if defined captcha_OnGameModeInit
+		return captcha_OnGameModeInit();
+	#else
+		return 1;
+	#endif
+}
+#if defined _ALS_OnGameModeInit
+	#undef OnGameModeInit
+#else
+	#define _ALS_OnGameModeInit
+#endif
+#define OnGameModeInit captcha_OnGameModeInit
+#if defined captcha_OnGameModeInit
+	forward captcha_OnGameModeInit();
+#endif
 
 public OnPlayerDisconnect(playerid, reason)
 {
 	captcha_DestroyTextdraw(playerid);
-
 #if defined captcha_OnPlayerDisconnect
 	return captcha_OnPlayerDisconnect(playerid, reason);
 #else
@@ -91,7 +120,6 @@ public OnPlayerDisconnect(playerid, reason)
 public OnPlayerSpawn(playerid)
 {
 	captcha_DestroyTextdraw(playerid);
-
 #if defined captcha_OnPlayerSpawn
 		return captcha_OnPlayerSpawn(playerid);
 	#else
@@ -110,11 +138,11 @@ public OnPlayerSpawn(playerid)
 
 public OnPlayerClickPlayerTextDraw(playerid, PlayerText:playertextid)
 {
-	if (captcha_PlayerInfo[playerid][captcha_is_show] == true)
+	if (captcha_PlayerInfo[playerid][captcha_is_init_td])
 	{
 		for (new i = 4; i < 7; i++)
 		{
-			if (playertextid == captcha_PlayerInfo[playerid][captcha_texdtraw][i])
+			if (playertextid == captcha_PlayerInfo[playerid][captcha_texdtraws][i])
 			{
 				new answer = captcha_PlayerInfo[playerid][captcha_correct_answer];
 
@@ -146,10 +174,9 @@ public OnPlayerClickPlayerTextDraw(playerid, PlayerText:playertextid)
 	forward captcha_OnPlayerClickPlayerTD(playerid, PlayerText:playertextid);
 #endif
 
-
 public OnPlayerClickTextDraw(playerid, Text:clickedid)
 {
-	if (clickedid == Text: INVALID_TEXT_DRAW)
+	if (clickedid == Text:INVALID_TEXT_DRAW)
 	{
 		captcha_DestroyTextdraw(playerid);
 	}
@@ -169,154 +196,164 @@ public OnPlayerClickTextDraw(playerid, Text:clickedid)
 	forward captcha_OnPlayerClickTextDraw(playerid, Text:clickedid);
 #endif
 
-
 stock captcha_ShowPlayer(const playerid, captchaid)
 {
-	if (captcha_PlayerInfo[playerid][captcha_is_show] == false)
+	if (!captcha_PlayerInfo[playerid][captcha_is_init_td])
 	{
-		captcha_CreateTextdraw(playerid);
-
-		new question = random(sizeof(links_for_captcha));
-
-		captcha_PlayerInfo[playerid][captcha_correct_answer] = links_for_captcha[question][captcha_number];
-
-		PlayAudioStreamForPlayer(
-			playerid,
-			links_for_captcha[question][captcha_links]
-		);
-		captcha_PlayerInfo[playerid][captcha_id] = captchaid;
-		captcha_PlayerInfo[playerid][captcha_is_show] = true;
-
-		for (new i; i < MAX_TD_CAPTCHA; i++)
-		{
-			PlayerTextDrawShow(
-				playerid,
-				captcha_PlayerInfo[playerid][captcha_texdtraw][i]
-			);
-		}
-		SelectTextDraw(playerid, 0xFFFFFF);
+		return 0;
 	}
+	new question = random(sizeof(gAudtioCaptchaLinks));
+
+	captcha_PlayerInfo[playerid][captcha_correct_answer] = gAudtioCaptchaLinks[question][captcha_number];
+
+	PlayAudioStreamForPlayer(
+		playerid,
+		gAudtioCaptchaLinks[question][captcha_links]
+	);
+	captcha_PlayerInfo[playerid][captcha_id] = captchaid;
+
+	captcha_InitTextdraws(playerid);
+	return 1;
 }
 
 static captcha_DestroyTextdraw(playerid)
 {
-	if (captcha_PlayerInfo[playerid][captcha_is_show] == true)
+	if (!captcha_PlayerInfo[playerid][captcha_is_init_td])
 	{
-		for (new i; i < MAX_TD_CAPTCHA; i++)
-		{
-			PlayerTextDrawDestroy(
-				playerid,
-				captcha_PlayerInfo[playerid][captcha_texdtraw][i]
-			);
-		}
-		CancelSelectTextDraw(playerid);
-		StopAudioStreamForPlayer(playerid);
+		return 0;
 	}
+	for (new i; i < MAX_TD_CAPTCHA; i++)
+	{
+		PlayerTextDrawDestroy(
+			playerid,
+			captcha_PlayerInfo[playerid][captcha_texdtraws][i]
+		);
+	}
+	CancelSelectTextDraw(playerid);
+	StopAudioStreamForPlayer(playerid);
+
 	captcha_PlayerInfo[playerid] = captcha_DefaultValue;
+	return 1;
 }
 
-static stock captcha_CreateTextdraw(playerid)
+static stock captcha_InitTextdraws(playerid)
 {
-	captcha_PlayerInfo[playerid][captcha_texdtraw][0] = CreatePlayerTextDraw(playerid, 268.3334, 173.9517, "LD_SPAC:white"); // пусто
-	PlayerTextDrawTextSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][0], 104.0000, 66.0000);
-	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][0], 1);
-	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][0], 370480895);
-	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][0], 255);
-	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][0], 4);
-	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][0], 0);
-	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][0], 0);
+	if (captcha_PlayerInfo[playerid][captcha_is_init_td])
+	{
+		return 0;
+	}
+	captcha_PlayerInfo[playerid][captcha_texdtraws][0] = CreatePlayerTextDraw(playerid, 268.3334, 173.9517, "LD_SPAC:white");
+	PlayerTextDrawTextSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][0], 104.0000, 66.0000);
+	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][0], 1);
+	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][0], 370480895);
+	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][0], 255);
+	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][0], 4);
+	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][0], 0);
+	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][0], 0);
 
-	captcha_PlayerInfo[playerid][captcha_texdtraw][1] = CreatePlayerTextDraw(playerid, 268.4333, 173.8074, "LD_SPAC:white"); // пусто
-	PlayerTextDrawTextSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][1], 103.7899, 2.0000);
-	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][1], 1);
-	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][1], 791621631);
-	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][1], 255);
-	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][1], 4);
-	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][1], 0);
-	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][1], 0);
+	captcha_PlayerInfo[playerid][captcha_texdtraws][1] = CreatePlayerTextDraw(playerid, 268.4333, 173.8074, "LD_SPAC:white");
+	PlayerTextDrawTextSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][1], 103.7899, 2.0000);
+	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][1], 1);
+	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][1], 791621631);
+	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][1], 255);
+	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][1], 4);
+	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][1], 0);
+	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][1], 0);
 
-	captcha_PlayerInfo[playerid][captcha_texdtraw][2] = CreatePlayerTextDraw(playerid, 268.3999, 238.0438, "LD_SPAC:white"); // пусто
-	PlayerTextDrawTextSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][2], 103.7699, 2.0000);
-	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][2], 1);
-	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][2], 791621631);
-	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][2], 255);
-	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][2], 4);
-	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][2], 0);
-	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][2], 0);
+	captcha_PlayerInfo[playerid][captcha_texdtraws][2] = CreatePlayerTextDraw(playerid, 268.3999, 238.0438, "LD_SPAC:white");
+	PlayerTextDrawTextSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][2], 103.7699, 2.0000);
+	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][2], 1);
+	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][2], 791621631);
+	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][2], 255);
+	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][2], 4);
+	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][2], 0);
+	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][2], 0);
 
-	captcha_PlayerInfo[playerid][captcha_texdtraw][3] = CreatePlayerTextDraw(playerid, 321.5668, 175.4224, "Audio_Captcha"); // пусто
-	PlayerTextDrawLetterSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][3], 0.1896, 1.3137);
-	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][3], 2);
-	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][3], -1061109505);
-	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][3], 255);
-	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][3], 2);
-	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][3], 1);
-	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][3], 0);
+	captcha_PlayerInfo[playerid][captcha_texdtraws][3] = CreatePlayerTextDraw(playerid, 321.5668, 175.4224, "Audio_Captcha");
+	PlayerTextDrawLetterSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][3], 0.1896, 1.3137);
+	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][3], 2);
+	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][3], -1061109505);
+	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][3], 255);
+	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][3], 2);
+	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][3], 1);
+	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][3], 0);
 
-	captcha_PlayerInfo[playerid][captcha_texdtraw][4] = CreatePlayerTextDraw(playerid, 273.4668, 198.1780, "LD_SPAC:white"); // пусто
-	PlayerTextDrawTextSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][4], 23.0000, 16.0000);
-	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][4], 1);
-	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][4], 791621631);
-	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][4], 255);
-	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][4], 4);
-	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][4], 0);
-	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][4], 0);
-	PlayerTextDrawSetSelectable(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][4], true);
+	captcha_PlayerInfo[playerid][captcha_texdtraws][4] = CreatePlayerTextDraw(playerid, 273.4668, 198.1780, "LD_SPAC:white");
+	PlayerTextDrawTextSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][4], 23.0000, 16.0000);
+	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][4], 1);
+	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][4], 791621631);
+	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][4], 255);
+	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][4], 4);
+	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][4], 0);
+	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][4], 0);
+	PlayerTextDrawSetSelectable(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][4], true);
 
-	captcha_PlayerInfo[playerid][captcha_texdtraw][5] = CreatePlayerTextDraw(playerid, 308.7343, 198.0780, "LD_SPAC:white"); // пусто
-	PlayerTextDrawTextSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][5], 23.0000, 16.0000);
-	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][5], 1);
-	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][5], 791621631);
-	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][5], 255);
-	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][5], 4);
-	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][5], 0);
-	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][5], 0);
-	PlayerTextDrawSetSelectable(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][5], true);
+	captcha_PlayerInfo[playerid][captcha_texdtraws][5] = CreatePlayerTextDraw(playerid, 308.7343, 198.0780, "LD_SPAC:white");
+	PlayerTextDrawTextSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][5], 23.0000, 16.0000);
+	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][5], 1);
+	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][5], 791621631);
+	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][5], 255);
+	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][5], 4);
+	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][5], 0);
+	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][5], 0);
+	PlayerTextDrawSetSelectable(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][5], true);
 
-	captcha_PlayerInfo[playerid][captcha_texdtraw][6] = CreatePlayerTextDraw(playerid, 343.3364, 198.0780, "LD_SPAC:white"); // пусто
-	PlayerTextDrawTextSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][6], 23.0000, 16.0000);
-	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][6], 1);
-	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][6], 791621631);
-	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][6], 255);
-	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][6], 4);
-	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][6], 0);
-	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][6], 0);
-	PlayerTextDrawSetSelectable(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][6], true);
+	captcha_PlayerInfo[playerid][captcha_texdtraws][6] = CreatePlayerTextDraw(playerid, 343.3364, 198.0780, "LD_SPAC:white");
+	PlayerTextDrawTextSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][6], 23.0000, 16.0000);
+	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][6], 1);
+	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][6], 791621631);
+	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][6], 255);
+	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][6], 4);
+	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][6], 0);
+	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][6], 0);
+	PlayerTextDrawSetSelectable(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][6], true);
 
-	captcha_PlayerInfo[playerid][captcha_texdtraw][7] = CreatePlayerTextDraw(playerid, 281.1332, 198.8928, "1"); // пусто
-	PlayerTextDrawLetterSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][7], 0.4000, 1.6000);
-	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][7], 1);
-	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][7], -1);
-	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][7], 255);
-	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][7], 3);
-	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][7], 1);
-	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][7], 0);
+	captcha_PlayerInfo[playerid][captcha_texdtraws][7] = CreatePlayerTextDraw(playerid, 281.1332, 198.8928, "1");
+	PlayerTextDrawLetterSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][7], 0.4000, 1.6000);
+	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][7], 1);
+	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][7], -1);
+	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][7], 255);
+	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][7], 3);
+	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][7], 1);
+	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][7], 0);
 
-	captcha_PlayerInfo[playerid][captcha_texdtraw][8] = CreatePlayerTextDraw(playerid, 316.4332, 198.4075, "2"); // пусто
-	PlayerTextDrawLetterSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][8], 0.4000, 1.6000);
-	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][8], 1);
-	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][8], -1);
-	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][8], 255);
-	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][8], 3);
-	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][8], 1);
-	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][8], 0);
+	captcha_PlayerInfo[playerid][captcha_texdtraws][8] = CreatePlayerTextDraw(playerid, 316.4332, 198.4075, "2");
+	PlayerTextDrawLetterSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][8], 0.4000, 1.6000);
+	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][8], 1);
+	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][8], -1);
+	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][8], 255);
+	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][8], 3);
+	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][8], 1);
+	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][8], 0);
 
-	captcha_PlayerInfo[playerid][captcha_texdtraw][9] = CreatePlayerTextDraw(playerid, 351.5332, 198.3075, "3"); // пусто
-	PlayerTextDrawLetterSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][9], 0.4000, 1.6000);
-	PlayerTextDrawTextSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][9], 3.0000, 0.0000);
-	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][9], 1);
-	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][9], -1);
-	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][9], 255);
-	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][9], 3);
-	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][9], 1);
-	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][9], 0);
+	captcha_PlayerInfo[playerid][captcha_texdtraws][9] = CreatePlayerTextDraw(playerid, 351.5332, 198.3075, "3");
+	PlayerTextDrawLetterSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][9], 0.4000, 1.6000);
+	PlayerTextDrawTextSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][9], 3.0000, 0.0000);
+	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][9], 1);
+	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][9], -1);
+	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][9], 255);
+	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][9], 3);
+	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][9], 1);
+	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][9], 0);
 
-	captcha_PlayerInfo[playerid][captcha_texdtraw][10] = CreatePlayerTextDraw(playerid, 321.4666, 223.3113, "select_the_desired_number"); // пусто
-	PlayerTextDrawLetterSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][10], 0.1463, 1.1810);
-	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][10], 2);
-	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][10], -2139062017);
-	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][10], 255);
-	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][10], 2);
-	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][10], 1);
-	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraw][10], 0);
+	captcha_PlayerInfo[playerid][captcha_texdtraws][10] = CreatePlayerTextDraw(playerid, 321.4666, 223.3113, "select_the_desired_number");
+	PlayerTextDrawLetterSize(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][10], 0.1463, 1.1810);
+	PlayerTextDrawAlignment(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][10], 2);
+	PlayerTextDrawColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][10], -2139062017);
+	PlayerTextDrawBackgroundColor(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][10], 255);
+	PlayerTextDrawFont(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][10], 2);
+	PlayerTextDrawSetProportional(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][10], 1);
+	PlayerTextDrawSetShadow(playerid, captcha_PlayerInfo[playerid][captcha_texdtraws][10], 0);
+
+	for (new i; i < MAX_TD_CAPTCHA; i++)
+	{
+		PlayerTextDrawShow(
+			playerid,
+			captcha_PlayerInfo[playerid][captcha_texdtraws][i]
+		);
+	}
+	SelectTextDraw(playerid, 0xFFFFFF);
+
+	captcha_PlayerInfo[playerid][captcha_is_init_td] = true;
+	return 1;
 }
